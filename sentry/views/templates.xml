@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<template id="assets_common_inherit" inherit_id="web.assets_common">
+
+    <xpath expr="." position="inside">
+        <script type="text/javascript" src="/sentry/static/src/js/raven.js"></script>
+    </xpath>
+
+</template>
+
+<template id="layout_inherit" name="Web layout" inherit_id="web.layout">
+
+    <head position="inside">
+        <script t-if="sentry_data.get('dsn')" type="text/javascript">
+            odoo.sentry_data = {
+                'dsn': '<t t-esc="sentry_data.get('dsn')"/>',
+                'user': {
+                    'name': '<t t-esc="sentry_data.get('user', {}).get('name')"/>',
+                    'email': '<t t-esc="sentry_data.get('user', {}).get('email')"/>',
+                },
+            };
+            Raven.config(odoo.sentry_data.dsn).install()
+        </script>
+    </head>
+
+</template>
+
+<template id="assets_backend_inherit" name="Sentry assets" inherit_id="web.assets_backend">
+    <xpath expr="." position="inside">
+        <link rel="stylesheet" href="/sentry/static/src/css/styles.css"/>
+        <script type="text/javascript" src="/sentry/static/src/js/sentry.js"/>
+    </xpath>
+</template>
+
+</odoo>

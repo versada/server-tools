@@ -1,0 +1,4 @@
+.sentry-error-embed-wrapper {
+    /*To keep on top of modal Odoo windows*/
+    z-index: 1100 !important;
+}

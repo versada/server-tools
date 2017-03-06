@@ -4,10 +4,11 @@
 
 import logging
 
+from odoo import http
 from odoo.service import wsgi_server
 from odoo.tools import config as odoo_config
 
-from . import const
+from . import const, models
 from .logutils import LoggerNameFilter, OdooSentryHandler
 
 _logger = logging.getLogger(__name__)
@@ -27,6 +28,18 @@ def get_odoo_commit(odoo_dir):
     except raven.exceptions.InvalidGitRepository:
         _logger.debug(
             u'Odoo directory: "%s" not a valid git repository', odoo_dir)
+
+
+def make_serialize_exception_wrapper(client):
+
+    original = http.serialize_exception
+
+    def wrapper(e):
+        tmp = original(e)
+        tmp['sentry_event_id'] = client.last_event_id
+        return tmp
+
+    http.serialize_exception = wrapper
 
 
 def initialize_raven(config, client_cls=raven.Client):
@@ -67,6 +80,8 @@ def initialize_raven(config, client_cls=raven.Client):
         raven.conf.setup_logging(handler)
         wsgi_server.application = Sentry(
             wsgi_server.application, client=client)
+
+        make_serialize_exception_wrapper(client)
 
     return client
 

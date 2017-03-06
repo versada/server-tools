@@ -19,6 +19,9 @@
         ]
     },
     'depends': [
-        'base',
+        'web',
+    ],
+    'data': [
+        'views/templates.xml',
     ],
 }
