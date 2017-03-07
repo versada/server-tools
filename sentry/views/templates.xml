@@ -12,7 +12,7 @@
 <template id="layout_inherit" name="Web layout" inherit_id="web.layout">
 
     <head position="inside">
-        <script t-if="sentry_data.get('dsn')" type="text/javascript">
+        <script t-if="sentry_data and sentry_data.get('dsn')" type="text/javascript">
             odoo.sentry_data = {
                 'dsn': '<t t-esc="sentry_data.get('dsn')"/>',
                 'user': {
