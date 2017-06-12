@@ -1,8 +1,8 @@
 # coding: utf-8
 # @ 2016 Florian da Costa @ Akretion
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
-import openerp.tests.common as common
-from openerp import api
+import odoo.tests.common as common
+from odoo import api
 from StringIO import StringIO
 
 
