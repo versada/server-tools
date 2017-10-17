@@ -41,12 +41,12 @@ class TestClient(odoo.tests.common.HttpCase):
 
     def test_webclient_sentry_config_is_set(self):
         self.config['sentry_enabled'] = True
-        html = self.url_open('/web').read()
+        html = self.url_open('/web', timeout=20).read()
         self.assertIn('sentry_config', html)
         self.assertIn(self.dsn, html)
 
     def test_sentry_disabled_webclient_sentry_config_is_not_set(self):
         self.config['sentry_enabled'] = False
-        html = self.url_open('/web').read()
+        html = self.url_open('/web', timeout=20).read()
         self.assertNotIn('sentry_config', html)
         self.assertNotIn(self.dsn, html)
