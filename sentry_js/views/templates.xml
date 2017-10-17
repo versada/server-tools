@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<template id="assets_backend_inherit" name="Sentry JS Backend Assets" inherit_id="web.assets_backend">
+
+    <xpath expr="." position="inside">
+        <script type="text/javascript" src="/sentry_js/static/src/lib/raven-js/raven.js"></script>
+        <script type="text/javascript" src="/sentry_js/static/src/js/web_client.js"></script>
+    </xpath>
+
+</template>
+
+<template id="layout_inherit" name="Web layout" inherit_id="web.layout">
+
+    <xpath expr="//head" position="inside">
+        <t t-if="sentry_config">
+                <script type="text/javascript">
+                    odoo.sentry_config = {
+                        'dsn': '<t t-esc="sentry_config.get('dsn')"/>',
+                        'user': {
+                            'name': '<t t-esc="sentry_config.get('user', {}).get('name')"/>',
+                            'email': '<t t-esc="sentry_config.get('user', {}).get('email')"/>',
+                        },
+                    };
+                </script>
+        </t>
+    </xpath>
+
+</template>
+
+</odoo>
