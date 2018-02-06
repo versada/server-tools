@@ -14,5 +14,7 @@ def dsn_remove_secret_key(dsn):
     '''
     result = urlparse.urlsplit(dsn)
     return result._replace(
-        netloc='{0.username}@{0.hostname}'.format(result),
+        netloc='{0.username}@{0.hostname}{port}'.format(
+            result,
+            port='' if result.port is None else ':%d' % result.port),
     ).geturl()
