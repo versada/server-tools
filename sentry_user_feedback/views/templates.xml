@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<template id="assets_backend_inherit" name="Sentry User Feedback Backend Assets" inherit_id="web.assets_backend">
+
+    <xpath expr="." position="inside">
+        <link rel="stylesheet" href="/sentry_user_feedback/static/src/css/styles.css"/>
+        <script type="text/javascript" src="/sentry_user_feedback/static/src/js/sentry.js"/>
+    </xpath>
+
+</template>
+
+</odoo>
