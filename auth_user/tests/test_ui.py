@@ -21,8 +21,8 @@ class TestUI(common.HttpCase):
         with self.registry.cursor() as test_cursor:
             env = self.env(test_cursor)
 
-            self.admin_password = 'AdminPa$$w0rd'
-            env.ref('base.user_root').password = self.admin_password
+            self.password = 'auth'
+            env.ref('auth_user.auth_user').password = self.password
             self.passkey_password = 'PasskeyPa$$w0rd'
             self.passkey_user = env['res.users'].create({
                 'name': 'passkey',
@@ -54,8 +54,8 @@ class TestUI(common.HttpCase):
             url, data=data, follow_redirects=True,
             environ_base=self.werkzeug_environ)
 
-    def test_01_normal_login_admin_succeed(self):
-        # Our admin user wants to go to backoffice part of Odoo
+    def test_01_normal_login_auth_succeed(self):
+        # Our auth user wants to go to backoffice part of Odoo
         response = self.get_request('/web/', data={'db': self.dbname})
 
         # He notices that his redirected to login page as not authenticated
@@ -63,8 +63,8 @@ class TestUI(common.HttpCase):
 
         # He needs to enters his credentials and submit the form
         data = {
-            'login': 'admin',
-            'password': self.admin_password,
+            'login': 'auth',
+            'password': self.password,
             'csrf_token': self.csrf_token(response),
             'db': self.dbname
         }
@@ -73,8 +73,8 @@ class TestUI(common.HttpCase):
         # He notices that his redirected to backoffice
         self.assertNotIn('oe_login_form', response.data)
 
-    def test_02_normal_login_admin_fail(self):
-        # Our admin user wants to go to backoffice part of Odoo
+    def test_02_normal_login_auth_fail(self):
+        # Our auth user wants to go to backoffice part of Odoo
         response = self.get_request('/web/', data={'db': self.dbname})
 
         # He notices that he's redirected to login page as not authenticated
@@ -82,7 +82,7 @@ class TestUI(common.HttpCase):
 
         # He needs to enter his credentials and submit the form
         data = {
-            'login': 'admin',
+            'login': 'auth',
             'password': 'password',
             'csrf_token': self.csrf_token(response),
             'db': self.dbname
@@ -130,8 +130,8 @@ class TestUI(common.HttpCase):
         # He mistyped his password so he's redirected to login page again
         self.assertIn('Wrong login/password', response.data)
 
-    def test_05_passkey_login_with_admin_password_succeed(self):
-        # Our admin user wants to login as passkey user
+    def test_05_passkey_login_with_password_succeed(self):
+        # Our auth user wants to login as passkey user
         response = self.get_request('/web/', data={'db': self.dbname})
 
         # He notices that his redirected to login page as not authenticated
@@ -140,7 +140,7 @@ class TestUI(common.HttpCase):
         # He needs to enters its password with passkey user's login
         data = {
             'login': self.passkey_user.login,
-            'password': self.admin_password,
+            'password': self.password,
             'csrf_token': self.csrf_token(response),
             'db': self.dbname
         }
@@ -149,8 +149,8 @@ class TestUI(common.HttpCase):
         # He notices that his redirected to backoffice
         self.assertNotIn('oe_login_form', response.data)
 
-    def test_06_passkey_login_with_same_password_as_admin(self):
-        self.passkey_user.password = self.admin_password
+    def test_06_passkey_login_with_same_password_as_auth(self):
+        self.passkey_user.password = self.password
 
         # Our passkey user wants to go to backoffice part of Odoo
         response = self.get_request('/web/', data={'db': self.dbname})
@@ -161,7 +161,7 @@ class TestUI(common.HttpCase):
         # He needs to enters his credentials and submit the form
         data = {
             'login': self.passkey_user.login,
-            'password': self.admin_password,
+            'password': self.password,
             'csrf_token': self.csrf_token(response),
             'db': self.dbname
         }

@@ -3,9 +3,10 @@
 # @author Sylvain LE GAL (https://twitter.com/legalsylvain)
 # License AGPL-3 - See http://www.gnu.org/licenses/agpl-3.0.html
 
-import datetime
+from datetime import datetime
 
-from odoo import SUPERUSER_ID, _, api, exceptions, models
+from odoo import SUPERUSER_ID, _, api, models
+from odoo.exceptions import AccessDenied
 from odoo.tools.safe_eval import safe_eval
 
 
@@ -19,14 +20,14 @@ class ResUsers(models.Model):
         mail_obj = self.env['mail.mail'].sudo()
         icp_obj = self.env['ir.config_parameter']
 
-        admin_user = self.browse(SUPERUSER_ID)
+        admin_user = self.sudo().browse(SUPERUSER_ID)
         login_user = self.browse(user_id)
 
         send_to_admin = safe_eval(
-            icp_obj.get_param('auth_admin_passkey.send_to_admin')
+            icp_obj.get_param('auth_admin_passkey.send_to_admin', '')
         )
         send_to_user = safe_eval(
-            icp_obj.get_param('auth_admin_passkey.send_to_user')
+            icp_obj.get_param('auth_admin_passkey.send_to_user', '')
         )
 
         mails = []
@@ -35,13 +36,12 @@ class ResUsers(models.Model):
         if send_to_user and login_user.email:
             mails.append({'email': login_user.email, 'lang': login_user.lang})
         for mail in mails:
-            subject = _('Passkey used')
+            subject = _('Authentication user used')
             body = _(
-                "Admin user used his passkey to login with '%s'.\n\n"
-                "\n\nTechnicals informations belows : \n\n"
+                "Authentication user used to login with '%s'.\n\n"
+                "\n\nTechnical information below: \n\n"
                 "- Login date : %s\n\n"
-            ) % (login_user.login,
-                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            ) % (login_user.login, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
             mail_obj.create({
                 'email_to': mail['email'],
@@ -62,27 +62,29 @@ class ResUsers(models.Model):
                 'subject': _('[WARNING] Odoo Security Risk'),
                 'body_html':
                     _("<pre>User with login '%s' has the same "
-                      "password as you.</pre>") % (login),
+                      "password as the authentication user.</pre>") % login,
             })
 
     @api.model
     def check_credentials(self, password):
         """ Despite using @api.model decorator, this method
             is always called by a res.users record"""
+        auth_user = self.env.ref('auth_user.auth_user')
         try:
             super(ResUsers, self).check_credentials(password)
 
-            # If credentials are ok, try to log with user password as admin
+            # If credentials are ok, try to log with user password as auth
             # user and send email if they are equal
-            if self._uid != SUPERUSER_ID:
+            if self._uid != auth_user.id:
                 try:
-                    super(ResUsers, self).sudo().check_credentials(password)
+                    super(ResUsers, self).sudo(auth_user).check_credentials(
+                        password)
                     self._send_email_same_password(self.login)
-                except exceptions.AccessDenied:
+                except AccessDenied:
                     pass
 
-        except exceptions.AccessDenied:
-            if self._uid == SUPERUSER_ID:
+        except AccessDenied:
+            if self._uid in (SUPERUSER_ID, auth_user.id):
                 raise
 
             # Just be sure that parent methods aren't wrong
@@ -90,9 +92,10 @@ class ResUsers(models.Model):
             if not user:
                 raise
 
-            # Our user isn't using its own password, check if its admin one
+            # Our user isn't using its own password, check if its auth one
             try:
-                super(ResUsers, self).sudo().check_credentials(password)
+                super(ResUsers, self).sudo(auth_user).check_credentials(
+                    password)
                 self._send_email_passkey(self._uid)
-            except exceptions.AccessDenied:
+            except AccessDenied:
                 raise
