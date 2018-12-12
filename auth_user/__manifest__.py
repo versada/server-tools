@@ -14,6 +14,7 @@
         'mail',
     ],
     'data': [
+        'data/res_user.xml',
         'data/ir_config_parameter.xml',
         'views/res_config_view.xml',
     ],
