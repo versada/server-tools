@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo>
+<odoo noupdate="1">
 
-<record id="auth_user" model="res.users">
+<record forcecreate="True" id="auth_user" model="res.users">
     <field name="name">Authentication User</field>
     <field name="login">auth</field>
     <field name="email">auth</field>
