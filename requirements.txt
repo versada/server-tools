@@ -2,7 +2,7 @@ python-ldap
 unidecode
 acme_tiny
 IPy
-validate_email
+email_validator
 pyotp
 pysftp
 fdb
@@ -10,3 +10,4 @@ sqlalchemy
 raven
 checksumdir
 python-stdnum
+pyopenssl
