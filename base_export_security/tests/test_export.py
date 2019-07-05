@@ -12,18 +12,20 @@ class TestExport(TransactionCase):
     def setUp(self):
         super(TestExport, self).setUp()
         export_group = self.env.ref('base_export_security.export_group')
+        internal_group = self.env.ref('base.group_user')
         self.authorized_user = self.env['res.users'].create({
             'login': 'exporttestuser',
             'partner_id': self.env['res.partner'].create({
                 'name': "Export Test User"
             }).id,
-            'groups_id': [(4, export_group.id, 0)],
+            'groups_id': [(4, export_group.id, 0), (4, internal_group.id, 0)],
         })
         self.unauthorized_user = self.env['res.users'].create({
             'login': 'unauthorizedexporttestuser',
             'partner_id': self.env['res.partner'].create({
                 'name': "Unauthorized Export Test User"
             }).id,
+            'groups_id': [(4, internal_group.id, 0)],
         })
         self.model_name = 'ir.module.module'
         self.recordset = self.env[self.model_name].search([])
@@ -71,8 +73,8 @@ class TestExport(TransactionCase):
         to the #data export channel"""
         export = self.env['export.event'].create({
             'model_id': self.model.id,
-            'field_ids': [(4, self.fields.ids)],
-            'record_ids': [(4, self.records.ids)],
+            'field_ids': [(6, 0, self.fields.ids)],
+            'record_ids': [(6, 0, self.records.ids)],
             'user_id': self.authorized_user.id,
         })
         message = export.sudo().post_notification()
