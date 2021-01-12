@@ -33,12 +33,12 @@ class IrModelData(models.Model):
 class CleanupPurgeLineModule(models.TransientModel):
     _inherit = "cleanup.purge.line"
     _name = "cleanup.purge.line.module"
+    _description = "Purge modules line"
 
     wizard_id = fields.Many2one(
         "cleanup.purge.wizard.module", "Purge Wizard", readonly=True
     )
 
-    @api.multi
     def purge(self):
         """
         Uninstall modules upon manual confirmation, then reload
@@ -83,7 +83,7 @@ class CleanupPurgeWizardModule(models.TransientModel):
                 continue
             if module.state == "uninstalled":
                 purge_lines += self.env["cleanup.purge.line.module"].create(
-                    {"name": module.name,}
+                    {"name": module.name}
                 )
                 continue
             res.append((0, 0, {"name": module.name}))
