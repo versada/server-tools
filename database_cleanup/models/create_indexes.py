@@ -16,7 +16,6 @@ class CreateIndexesLine(models.TransientModel):
     field_id = fields.Many2one("ir.model.fields", required=True)
 
     def purge(self):
-        tables = set()
         for field in self.mapped("field_id"):
             model = self.env[field.model]
             name = "{}_{}_index".format(model._table, field.name)
@@ -28,9 +27,7 @@ class CreateIndexesLine(models.TransientModel):
                     IdentifierAdapter(field.name),
                 ),
             )
-            tables.add(model._table)
-        for table in tables:
-            self.env.cr.execute("analyze %s", (IdentifierAdapter(table),))
+            self.env.cr.execute("analyze %s", (IdentifierAdapter(model._table),))
         self.write({"purged": True})
 
 
