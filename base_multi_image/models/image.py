@@ -47,7 +47,7 @@ class Image(models.Model):
     load_from = fields.Char(
         string="Load from",
         help="Either a remote url or a file path on the server",
-        store=False,
+        store=True,
     )
     comments = fields.Text(translate=True)
     sequence = fields.Integer(default=10)
@@ -83,14 +83,11 @@ class Image(models.Model):
             # Retrieve from remote url
             self.image_1920 = self._get_image_from_url(self.load_from)
             filename = self.load_from.split("/")[-1]
-            self.name, self.extension = os.path.splitext(filename)
+            self.name, extension = os.path.splitext(filename)
         else:
             self.image_1920 = self._get_image_from_file(self.load_from)
-            self.name, self.extension = os.path.splitext(
-                os.path.basename(self.load_from)
-            )
+            self.name, extension = os.path.splitext(os.path.basename(self.load_from))
         self.name = self._make_name_pretty(self.name)
-        self.load_from = False
 
     @api.model
     def _get_image_from_file(self, path):
@@ -174,9 +171,3 @@ class Image(models.Model):
     @api.model
     def _make_name_pretty(self, name):
         return name.replace("_", " ").capitalize()
-
-    @api.onchange("filename")
-    def _onchange_filename(self):
-        if self.filename:
-            self.name, self.extension = os.path.splitext(self.filename)
-            self.name = self._make_name_pretty(self.name)
