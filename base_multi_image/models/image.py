@@ -24,6 +24,7 @@ from odoo.addons.base_import.models.base_import import (
 )
 
 _logger = logging.getLogger(__name__)
+_lt = tools.LazyTranslate(__name__, default_lang="en_US")
 
 
 class Image(models.Model):
@@ -35,7 +36,7 @@ class Image(models.Model):
         (
             "uniq_name_owner",
             "UNIQUE(owner_id, owner_model, name)",
-            _("A document can have only one image with the same name."),
+            _lt("A document can have only one image with the same name."),
         ),
     ]
 
