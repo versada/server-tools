@@ -87,10 +87,12 @@ class UpgradeAnalysis(models.Model):
         module = self.env["ir.module.module"].search([("name", "=", module_name)])[0]
         if module.is_odoo_module:
             if not self.upgrade_path:
-                return (
-                    f"ERROR: no upgrade_path set when writing analysis of "
-                    f"{module_name}\n"
-                )
+                self._compute_upgrade_path()
+                if not self.upgrade_path:
+                    return (
+                        f"ERROR: no upgrade_path set when writing analysis of "
+                        f"{module_name}\n"
+                    )
             full_path = os.path.join(self.upgrade_path, module_name, version)
         else:
             full_path = os.path.join(
@@ -536,11 +538,13 @@ class UpgradeAnalysis(models.Model):
         all_local_modules = (
             self.env["ir.module.module"].search(module_domain).mapped("name")
         )
-        all_remote_modules = (
-            connection.env["ir.module.module"]
-            .browse(connection.env["ir.module.module"].search(module_domain))
-            .mapped("name")
-        )
+
+        all_remote_modules = [
+            x["name"]
+            for x in connection.env["ir.module.module"].search_read(
+                module_domain, ["name"]
+            )
+        ]
 
         start_version = connection.version
         end_version = release.major_version
