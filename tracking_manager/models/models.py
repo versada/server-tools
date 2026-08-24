@@ -6,7 +6,7 @@
 
 from collections import defaultdict
 
-from odoo import Command, api, models, tools
+from odoo import Command, _, api, models, tools
 from odoo.exceptions import AccessError
 from odoo.tools import float_compare, float_repr, float_round
 
@@ -91,6 +91,9 @@ class Base(models.AbstractModel):
             return format_m2m(before), format_m2m(after)
         if field.type == "many2one":
             return before.display_name, after["display_name"]
+        if field.type == "boolean":
+            # a falsy value would be rendered as an empty string
+            return (_("Yes") if before else _("No"), _("Yes") if after else _("No"))
         if digits is not None:
             # displaying the raw value would expose the representation error of
             # the rounding done on write (0.1 -> 0.09999999999999999)

@@ -302,3 +302,17 @@ class TestTrackingManager(TransactionCase):
         # values are displayed with the precision of the field (10, 7)
         self.assertIn("0.1000000", self.messages.body)
         self.assertIn("1.5000000", self.messages.body)
+
+    def test_o2m_update_boolean(self):
+        self.env.ref("base.field_res_partner__child_ids").custom_tracking = True
+        self.env.ref("base.field_res_partner__is_company").custom_tracking = True
+        child = self.env["res.partner"].create(
+            {"name": "Test child", "parent_id": self.partner.id}
+        )
+        self.flush_tracking()
+        self.partner.message_ids.unlink()
+        child.write({"is_company": True})
+        self.assertEqual(len(self.messages), 1)
+        body = " ".join(self.messages.body.split())
+        self.assertIn("Is a Company : No", body)
+        self.assertIn("Yes", body)
