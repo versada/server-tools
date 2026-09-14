@@ -6,8 +6,9 @@
 
 from collections import defaultdict
 
-from odoo import Command, api, models, tools
+from odoo import Command, _, api, models, tools
 from odoo.exceptions import AccessError
+from odoo.tools import float_compare, float_repr, float_round
 
 from ..tools import format_m2m
 
@@ -54,28 +55,79 @@ class Base(models.AbstractModel):
                 {
                     "mode": mode,
                     "record": self.display_name,
+                    # Named again when the message is built, as values written
+                    # later in the same transaction may still change the name.
+                    # An unlinked record can no longer be read by then.
+                    "record_ref": None if mode == "unlink" else self,
                     "changes": changes,
                 }
             )
 
+    def _tm_name_records_late(self, messages):
+        """Name the tracked records with the values they end the transaction on.
+
+        A record is named when its change is tracked, which for a creation is
+        before the values written to it later in the same transaction are in
+        place. A record that no longer exists keeps the name taken back then.
+        """
+        for message in messages:
+            record = message.pop("record_ref", None)
+            if record is not None and record.exists():
+                message["record"] = record.display_name
+
     def _tm_get_field_description(self, field_name):
         return self._fields[field_name].get_description(self.env)["string"]
+
+    def _tm_get_digits(self, field):
+        """Return the decimal digits of a float field, None for other fields.
+
+        Float fields declared without precision also return None: their values
+        are stored and compared with the full float precision.
+        """
+        if field.type == "monetary":
+            currency_field = field.get_currency_field(self)
+            currency = currency_field and self[currency_field]
+            return currency.decimal_places if currency else None
+        if field.type != "float":
+            return None
+        digits = field.get_digits(self.env)
+        return digits and digits[1]
+
+    def _tm_has_changed(self, before, after, digits):
+        if digits is None:
+            return before != after
+        # `float_round`, applied to every written value, may return a value that
+        # differs by one unit in the last place from the one read from database
+        # (0.1 -> 0.09999999999999999). Both are stored identically, so such a
+        # difference is not a change.
+        return float_compare(before, after, precision_digits=digits) != 0
+
+    def _tm_format_values(self, field, before, after, digits):
+        if field.type == "many2many":
+            return format_m2m(before), format_m2m(after)
+        if field.type == "many2one":
+            return before.display_name, after["display_name"]
+        if field.type == "boolean":
+            # a falsy value would be rendered as an empty string
+            return (_("Yes") if before else _("No"), _("Yes") if after else _("No"))
+        if digits is not None:
+            # displaying the raw value would expose the representation error of
+            # the rounding done on write (0.1 -> 0.09999999999999999)
+            return (
+                float_repr(float_round(before, precision_digits=digits), digits),
+                float_repr(float_round(after, precision_digits=digits), digits),
+            )
+        return before, after
 
     def _tm_get_changes(self, values):
         self.ensure_one()
         changes = []
         for field_name, before in values.items():
             field = self._fields[field_name]
-            if before != self[field_name]:
-                if field.type == "many2many":
-                    old = format_m2m(before)
-                    new = format_m2m(self[field_name])
-                elif field.type == "many2one":
-                    old = before.display_name
-                    new = self[field_name]["display_name"]
-                else:
-                    old = before
-                    new = self[field_name]
+            after = self[field_name]
+            digits = self._tm_get_digits(field)
+            if self._tm_has_changed(before, after, digits):
+                old, new = self._tm_format_values(field, before, after, digits)
                 changes.append(
                     {
                         "name": self._tm_get_field_description(field_name),
@@ -95,6 +147,8 @@ class Base(models.AbstractModel):
                 if not record_id:
                     continue
                 record = self.env[model_name].browse(record_id)
+                for field_messages in messages_by_field.values():
+                    record._tm_name_records_late(field_messages)
                 messages = [
                     {
                         "name": record._tm_get_field_description(field_name),
@@ -132,7 +186,13 @@ class Base(models.AbstractModel):
         initial_values = self.env.cr.precommit.data.pop(
             f"tracking.manager.before.{self._name}", {}
         )
+        created_ids = self._tm_get_created_ids()
         for _id, values in initial_values.items():
+            if _id in created_ids:
+                # The record is already reported as a creation, named with the
+                # values it ends the transaction on. The values it was created
+                # with are no "before" to report a change against.
+                continue
             # Always use sudo in case that the record have been modified using sudo
             record = self.sudo().browse(_id)
             if not record.exists():
@@ -146,8 +206,21 @@ class Base(models.AbstractModel):
         self._tm_post_message(data)
         self.flush_model()
 
+    def _tm_get_created_ids(self):
+        """Return the ids of the records of this model created in this transaction.
+
+        Left in place for the whole transaction: `Callbacks.run` clears its data
+        once every callback has been called, and a model finalizing its own
+        tracking must not discard what another model still needs.
+        """
+        return self.env.cr.precommit.data.setdefault(
+            "tracking.manager.created", defaultdict(set)
+        )[self._name]
+
     def _tm_track_create_unlink(self, mode):
         self.env.cr.precommit.add(self._tm_finalize_o2m_tracking)
+        if mode == "create":
+            self._tm_get_created_ids().update(self.ids)
         for record in self:
             record._tm_notify_owner(mode)
 
